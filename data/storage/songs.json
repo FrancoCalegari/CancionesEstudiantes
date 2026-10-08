@@ -1,0 +1,108 @@
+[
+  {
+    "id": "song-1791490620524-4k2nr",
+    "title": "Around The World",
+    "artist": "Daft Punk",
+    "link": "https://www.youtube.com/watch?v=k5JJMqfQ1gM",
+    "platform": "youtube",
+    "requestedBy": {
+      "id": "user-1791490620494-q4b1j",
+      "name": "Camila Gomez",
+      "course": "Frontend con React",
+      "avatar": "🎧"
+    },
+    "note": "¡Para meterle ritmo al CSS Grid!",
+    "status": "playing",
+    "votes": 1,
+    "voters": [
+      "user-1791490620494-q4b1j"
+    ],
+    "createdAt": "2026-10-08T20:17:00.524Z"
+  },
+  {
+    "id": "song-1",
+    "title": "Resonance",
+    "artist": "HOME",
+    "link": "https://www.youtube.com/watch?v=8GW6sLrK40k",
+    "platform": "youtube",
+    "requestedBy": {
+      "id": "user-matias",
+      "name": "Matías Rodríguez",
+      "course": "Desarrollo Web Full Stack",
+      "avatar": "💻"
+    },
+    "note": "¡Temazo synthwave para concentrarse a full tirando código!",
+    "status": "played",
+    "votes": 8,
+    "voters": [
+      "user-matias",
+      "user-sofia",
+      "user-lucas"
+    ],
+    "createdAt": "2026-10-08T18:16:52.303Z"
+  },
+  {
+    "id": "song-2",
+    "title": "Lofi Hip Hop Radio - Beats to Relax/Study to",
+    "artist": "Lofi Girl",
+    "link": "https://www.youtube.com/watch?v=jfKfPfyJRdk",
+    "platform": "youtube",
+    "requestedBy": {
+      "id": "user-sofia",
+      "name": "Sofía Álvarez",
+      "course": "Programación Backend Node.js",
+      "avatar": "🚀"
+    },
+    "note": "El clásico infaltable de las tardes de laboratorio.",
+    "status": "pending",
+    "votes": 12,
+    "voters": [
+      "user-sofia",
+      "user-matias"
+    ],
+    "createdAt": "2026-10-08T18:46:52.303Z"
+  },
+  {
+    "id": "song-3",
+    "title": "Midnight City",
+    "artist": "M83",
+    "link": "https://open.spotify.com/track/1eyzqe2QqGZUmfcPZtrIyt",
+    "platform": "spotify",
+    "requestedBy": {
+      "id": "user-lucas",
+      "name": "Lucas Benítez",
+      "course": "Desarrollo Web Full Stack",
+      "avatar": "🎧"
+    },
+    "note": "Para cuando llegamos al deploy de los viernes",
+    "status": "pending",
+    "votes": 5,
+    "voters": [
+      "user-lucas"
+    ],
+    "createdAt": "2026-10-08T19:16:52.303Z"
+  },
+  {
+    "id": "song-4",
+    "title": "De Música Ligera",
+    "artist": "Soda Stereo",
+    "link": "Soda Stereo - De Música Ligera",
+    "platform": "search",
+    "requestedBy": {
+      "id": "user-matias",
+      "name": "Matías Rodríguez",
+      "course": "Desarrollo Web Full Stack",
+      "avatar": "💻"
+    },
+    "note": "Un clásico nacional mientras arreglamos los bugs",
+    "status": "played",
+    "votes": 15,
+    "voters": [
+      "user-matias",
+      "user-sofia",
+      "user-lucas",
+      "user-profe"
+    ],
+    "createdAt": "2026-10-07T20:16:52.303Z"
+  }
+]

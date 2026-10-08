@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CancionesEstudiantes | Incuyo & Franco Profe 🎵</title>
+  <meta name="description" content="Plataforma interactiva para que los estudiantes de Incuyo pidan canciones de YouTube o Spotify para programar en las clases de Franco Profe.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- Main Styles -->
+  <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%3E<text y=%2226%22 font-size=%2224%22>🎵</text></svg>">
+</head>
+<body class="theme-dark">
+  <!-- Background Glow & Grid Canvas -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+  <div class="bg-grid-overlay"></div>
+
+  <!-- Announcement Ticker -->
+  <div id="announcement-banner" class="announcement-bar">
+    <div class="announcement-content">
+      <span class="pulse-dot"></span>
+      <span id="announcement-text">🔥 ¡Bienvenidos a la clase de Incuyo! Pedí tus canciones favoritas de YouTube o Spotify para programar.</span>
+    </div>
+    <div class="announcement-mode" id="announcement-mode-badge">🎧 Modo: Concentración y Código</div>
+  </div>
+
+  <!-- Header / Navigation -->
+  <header class="main-header">
+    <div class="container header-container">
+      <div class="brand-wrapper">
+        <div class="logo-icon-box">
+          <span class="logo-emoji">🎵</span>
+          <div class="equalizer-bars">
+            <span class="eq-bar eq-1"></span>
+            <span class="eq-bar eq-2"></span>
+            <span class="eq-bar eq-3"></span>
+            <span class="eq-bar eq-4"></span>
+          </div>
+        </div>
+        <div class="brand-text">
+          <h1 class="brand-title">Canciones<span>Estudiantes</span></h1>
+          <span class="brand-subtitle">Incuyo • Clases con Franco Profe</span>
+        </div>
+      </div>
+
+      <!-- Quick Demo Role Switcher -->
+      <div class="demo-role-quickbar">
+        <span class="quick-label">⚡ Acceso Rápido:</span>
+        <button type="button" class="btn-chip" onclick="App.loginAsDemo('franco@incuyo.edu.ar', 'profe123')">
+          👨‍🏫 Franco (Profe)
+        </button>
+        <button type="button" class="btn-chip" onclick="App.loginAsDemo('matias@estudiante.incuyo.edu.ar', '123')">
+          💻 Matías (Alumno)
+        </button>
+        <button type="button" class="btn-chip" onclick="App.loginAsDemo('sofia@estudiante.incuyo.edu.ar', '123')">
+          🚀 Sofía (Alumna)
+        </button>
+      </div>
+
+      <!-- User Auth State Navigation -->
+      <div class="nav-actions" id="nav-actions">
+        <!-- Will be populated dynamically via JavaScript -->
+        <button type="button" id="btn-open-login" class="btn btn-secondary" onclick="App.openModal('login-modal')">
+          Iniciar Sesión
+        </button>
+        <button type="button" id="btn-open-register" class="btn btn-primary" onclick="App.openModal('register-modal')">
+          Registrarse
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Body -->
+  <main class="container main-content">
+    
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-text-col">
+        <div class="hero-badge">
+          <span class="badge-icon">🎧</span> Playlist Colaborativa en Vivo
+        </div>
+        <h2 class="hero-headline">
+          La música que acompaña <br><span class="gradient-text">tus líneas de código</span>
+        </h2>
+        <p class="hero-description">
+          ¿Estás en clase en <strong>Incuyo</strong>? Enviá tus canciones de <strong>YouTube</strong>, <strong>Spotify</strong> o el nombre del tema. El <strong>Profe Franco</strong> sabrá quién lo pidió y pondrá los mejores temas para la sesión de programación.
+        </p>
+        
+        <div class="hero-buttons">
+          <button type="button" class="btn btn-cta" onclick="App.handleRequestSongClick()">
+            <span class="btn-icon">✨</span> Pedir una Canción Ahora
+          </button>
+          <a href="#cola-canciones" class="btn btn-glass">
+            <span class="btn-icon">📜</span> Ver Cola de Canciones
+          </a>
+        </div>
+
+        <!-- Realtime mini stats -->
+        <div class="stats-row">
+          <div class="stat-card">
+            <span class="stat-value" id="stat-total">0</span>
+            <span class="stat-label">Canciones Pedidas</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="stat-pending">0</span>
+            <span class="stat-label">En Cola de Espera</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="stat-played">0</span>
+            <span class="stat-label">Ya Reproducidas</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Now Playing Feature Disc Card -->
+      <div class="hero-player-col">
+        <div class="now-playing-card" id="now-playing-container">
+          <div class="card-glass-header">
+            <span class="live-pill"><span class="live-blink"></span> SONANDO AHORA EN CLASE</span>
+            <span class="dj-pill">🎧 DJ: Franco Profe</span>
+          </div>
+
+          <div class="vinyl-display-wrapper">
+            <div class="vinyl-disc active" id="vinyl-disc">
+              <div class="vinyl-grooves"></div>
+              <div class="vinyl-center">
+                <span class="vinyl-note">🎵</span>
+              </div>
+            </div>
+            <div class="tonearm" id="tonearm"></div>
+          </div>
+
+          <div class="track-details" id="current-track-details">
+            <h3 class="track-title" id="now-playing-title">Cargando música...</h3>
+            <p class="track-artist" id="now-playing-artist">Esperando tema actual</p>
+            
+            <div class="track-student-tag" id="now-playing-student-tag">
+              <span class="student-avatar" id="now-playing-avatar">👨‍💻</span>
+              <span class="student-name" id="now-playing-student">Pedido por un estudiante</span>
+            </div>
+
+            <p class="track-note" id="now-playing-note">"¡A programar sin parar!"</p>
+
+            <div class="track-actions-row">
+              <a href="#" target="_blank" rel="noopener noreferrer" id="now-playing-link-btn" class="btn btn-sm btn-outline-cyan">
+                Abrir en Plataforma ↗
+              </a>
+              <button type="button" class="btn btn-sm btn-glass" onclick="App.openEmbeddedPlayerForCurrent()">
+                ▶️ Reproductor Integrado
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Teacher Special Control Panel (Visible when logged in as Franco Profe) -->
+    <section class="teacher-panel" id="teacher-panel" style="display: none;">
+      <div class="teacher-panel-header">
+        <div class="teacher-title-box">
+          <span class="teacher-badge">👨‍🏫 PANEL DE CONTROL • FRANCO PROFE</span>
+          <h3>Gestión de la Playlist y Clase</h3>
+        </div>
+        <div class="teacher-quick-stats">
+          <span class="tag-status">Modo Docente Activo</span>
+        </div>
+      </div>
+
+      <div class="teacher-controls-grid">
+        <div class="teacher-card">
+          <h4>📢 Mensaje para los Alumnos</h4>
+          <form id="announcement-form" onsubmit="App.handleUpdateAnnouncement(event)">
+            <input type="text" id="input-announcement" class="input-control" placeholder="Escribe un anuncio para la barra superior..." required>
+            <div class="form-row-between mt-2">
+              <select id="select-class-mode" class="input-control select-control">
+                <option value="Concentración y Código">🎧 Modo: Concentración y Código</option>
+                <option value="Fix de Bugs Intenso">⚡ Modo: Fix de Bugs Intenso</option>
+                <option value="Deploy de Viernes">🚀 Modo: Deploy de Viernes</option>
+                <option value="Momento Chill / Dudas">☕ Modo: Momento Chill / Dudas</option>
+              </select>
+              <button type="submit" class="btn btn-sm btn-primary">Actualizar Anuncio</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="teacher-card">
+          <h4>⚙️ Opciones de Recepción</h4>
+          <p class="text-muted-sm">Controlá si los alumnos pueden seguir enviando solicitudes.</p>
+          <div class="toggle-control-box mt-2">
+            <label class="switch">
+              <input type="checkbox" id="toggle-accept-requests" checked onchange="App.handleToggleAccepting(this.checked)">
+              <span class="slider round"></span>
+            </label>
+            <span id="accepting-label" class="toggle-text">Aceptando pedidos de canciones</span>
+          </div>
+          <button type="button" class="btn btn-sm btn-danger-outline mt-3" onclick="App.handleResetData()">
+            🔄 Restablecer Datos de Demostración
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Song List and Filtering Section -->
+    <section class="songs-section" id="cola-canciones">
+      <div class="section-header-row">
+        <div class="section-title-group">
+          <h3 class="section-heading">Cola de Canciones para la Clase</h3>
+          <p class="section-subtext">Votá tus favoritas para que Franco Profe las ponga primero.</p>
+        </div>
+
+        <!-- Action Button -->
+        <button type="button" class="btn btn-primary btn-pulse" onclick="App.handleRequestSongClick()">
+          <span class="btn-icon">➕</span> Pedir Canción
+        </button>
+      </div>
+
+      <!-- Filter Tabs & Search -->
+      <div class="filter-bar">
+        <div class="filter-tabs" id="filter-tabs">
+          <button type="button" class="filter-tab active" data-filter="all" onclick="App.setFilter('all')">
+            🔥 Todas <span class="tab-count" id="count-all">0</span>
+          </button>
+          <button type="button" class="filter-tab" data-filter="pending" onclick="App.setFilter('pending')">
+            🕒 En Cola <span class="tab-count" id="count-pending">0</span>
+          </button>
+          <button type="button" class="filter-tab" data-filter="playing" onclick="App.setFilter('playing')">
+            ▶️ Sonando <span class="tab-count" id="count-playing">0</span>
+          </button>
+          <button type="button" class="filter-tab" data-filter="played" onclick="App.setFilter('played')">
+            ✅ Reproducidas <span class="tab-count" id="count-played">0</span>
+          </button>
+          <button type="button" class="filter-tab" data-filter="mine" onclick="App.setFilter('mine')" id="tab-mine" style="display: none;">
+            👤 Mis Pedidos <span class="tab-count" id="count-mine">0</span>
+          </button>
+        </div>
+
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="song-search-input" placeholder="Buscar por canción, artista o estudiante..." oninput="App.handleSearch(this.value)">
+        </div>
+      </div>
+
+      <!-- Songs Cards Grid / Container -->
+      <div class="songs-grid" id="songs-grid">
+        <!-- Filled dynamically by JavaScript -->
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Sintonizando pedidos de canciones...</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Request Song Modal Dialog -->
+  <dialog id="request-modal" class="modal-dialog">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-emoji">🎵</span>
+          <h3>Pedir una Canción para la Clase</h3>
+        </div>
+        <button type="button" class="btn-close" onclick="App.closeModal('request-modal')">&times;</button>
+      </div>
+
+      <form id="request-song-form" onsubmit="App.handleSubmitSong(event)" class="modal-body">
+        <p class="modal-intro">
+          Pasale al Profe Franco el enlace de <strong>YouTube</strong>, <strong>Spotify</strong> o simplemente el nombre y artista del tema.
+        </p>
+
+        <div class="form-group">
+          <label for="song-input-link" class="form-label">Link de YouTube / Spotify o Nombre de la Canción <span class="required">*</span></label>
+          <input 
+            type="text" 
+            id="song-input-link" 
+            class="input-control" 
+            placeholder="Ej: https://youtu.be/... o Soda Stereo - Prófugos" 
+            required
+            oninput="App.handleLinkInputDetection(this.value)"
+          >
+          <div id="link-preview-badge" class="platform-detect-pill" style="display: none;">
+            <!-- Detected badge -->
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="song-input-title" class="form-label">Título del Tema (Opcional si pusiste link)</label>
+            <input type="text" id="song-input-title" class="input-control" placeholder="Ej: Bohemian Rhapsody">
+          </div>
+          <div class="form-group">
+            <label for="song-input-artist" class="form-label">Artista / Banda</label>
+            <input type="text" id="song-input-artist" class="input-control" placeholder="Ej: Queen">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="song-input-note" class="form-label">Dedicatoria o Vibe de Programación</label>
+          <input type="text" id="song-input-note" class="input-control" placeholder="Ej: Para meterle ritmo a la práctica de JS 🔥">
+        </div>
+
+        <div class="modal-user-identity" id="modal-user-preview">
+          <span class="user-id-icon">👨‍🎓</span>
+          <div class="user-id-info">
+            <strong id="modal-submitter-name">Estudiante</strong>
+            <span id="modal-submitter-course">Comisión Incuyo</span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-glass" onclick="App.closeModal('request-modal')">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-song">
+            🚀 Enviar Petición al Profe
+          </button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Login Modal Dialog -->
+  <dialog id="login-modal" class="modal-dialog">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-emoji">🔐</span>
+          <h3>Iniciar Sesión</h3>
+        </div>
+        <button type="button" class="btn-close" onclick="App.closeModal('login-modal')">&times;</button>
+      </div>
+
+      <form id="login-form" onsubmit="App.handleLogin(event)" class="modal-body">
+        <div class="form-group">
+          <label for="login-email" class="form-label">Correo Electrónico</label>
+          <input type="email" id="login-email" class="input-control" placeholder="tu-nombre@estudiante.incuyo.edu.ar" required>
+        </div>
+
+        <div class="form-group">
+          <label for="login-password" class="form-label">Contraseña</label>
+          <input type="password" id="login-password" class="input-control" placeholder="••••••••" required>
+        </div>
+
+        <div class="login-quick-suggestions">
+          <span>O ingresá con 1 clic:</span>
+          <div class="quick-btns-row">
+            <button type="button" class="btn-chip" onclick="App.fillLoginForm('franco@incuyo.edu.ar', 'profe123')">
+              👨‍🏫 Franco Profe
+            </button>
+            <button type="button" class="btn-chip" onclick="App.fillLoginForm('matias@estudiante.incuyo.edu.ar', '123')">
+              💻 Matías (Alumno)
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-glass" onclick="App.switchToRegister()">Crear Cuenta</button>
+          <button type="submit" class="btn btn-primary">Ingresar</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Register Modal Dialog -->
+  <dialog id="register-modal" class="modal-dialog">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-emoji">🎓</span>
+          <h3>Registro de Estudiante</h3>
+        </div>
+        <button type="button" class="btn-close" onclick="App.closeModal('register-modal')">&times;</button>
+      </div>
+
+      <form id="register-form" onsubmit="App.handleRegister(event)" class="modal-body">
+        <div class="form-group">
+          <label for="register-name" class="form-label">Nombre y Apellido <span class="required">*</span></label>
+          <input type="text" id="register-name" class="input-control" placeholder="Ej: Juan Pérez" required>
+        </div>
+
+        <div class="form-group">
+          <label for="register-email" class="form-label">Correo Electrónico <span class="required">*</span></label>
+          <input type="email" id="register-email" class="input-control" placeholder="juan@estudiante.incuyo.edu.ar" required>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="register-course" class="form-label">Carrera / Curso Incuyo</label>
+            <select id="register-course" class="input-control select-control">
+              <option value="Desarrollo Web Full Stack">Desarrollo Web Full Stack</option>
+              <option value="Programación Backend Node.js">Programación Backend Node.js</option>
+              <option value="Frontend con React">Frontend con React</option>
+              <option value="Algoritmos y Estructuras">Algoritmos y Estructuras</option>
+              <option value="Base de Datos y APIs">Base de Datos y APIs</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="register-avatar" class="form-label">Avatar Emoji</label>
+            <select id="register-avatar" class="input-control select-control">
+              <option value="💻">💻 Programador</option>
+              <option value="🚀">🚀 Cohete</option>
+              <option value="🎧">🎧 Con Auriculares</option>
+              <option value="🔥">🔥 Modo Fuego</option>
+              <option value="⚡">⚡ Rayo</option>
+              <option value="🦊">🦊 Zorro Dev</option>
+              <option value="🤖">🤖 Bot</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="register-password" class="form-label">Contraseña <span class="required">*</span></label>
+          <input type="password" id="register-password" class="input-control" placeholder="Creá una contraseña" required>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-glass" onclick="App.switchToLogin()">Ya tengo cuenta</button>
+          <button type="submit" class="btn btn-primary">Completar Registro</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Embedded Audio/Video Player Modal -->
+  <dialog id="player-modal" class="modal-dialog modal-player">
+    <div class="modal-card modal-player-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-emoji">🎧</span>
+          <h3 id="player-modal-title">Reproductor Incuyo</h3>
+        </div>
+        <button type="button" class="btn-close" onclick="App.closePlayerModal()">&times;</button>
+      </div>
+
+      <div class="player-modal-body">
+        <div id="player-iframe-container" class="player-embed-box">
+          <!-- Embed iframe will be injected dynamically -->
+        </div>
+        <div class="player-modal-footer-info" id="player-footer-info">
+          <span id="player-requested-by">Solicitado por Estudiante</span>
+          <a href="#" target="_blank" rel="noopener noreferrer" id="player-external-btn" class="btn btn-sm btn-outline-cyan">
+            Ver en Plataforma Oficial ↗
+          </a>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Footer -->
+  <footer class="main-footer">
+    <div class="container footer-content">
+      <div class="footer-brand">
+        <span class="logo-emoji">🎵</span>
+        <span><strong>CancionesEstudiantes</strong> • Desarrollado para las clases de <strong>Incuyo</strong> con <strong>Franco Profe</strong></span>
+      </div>
+      <div class="footer-meta">
+        <span>Node.js + Vercel Ready</span>
+        <span>•</span>
+        <span>Código & Flow 🚀</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Main JavaScript Application Logic -->
+  <script src="/js/app.js"></script>
+</body>
+</html>

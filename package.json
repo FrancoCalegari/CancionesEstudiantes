@@ -1,0 +1,26 @@
+{
+  "name": "canciones-estudiantes-incuyo",
+  "version": "1.0.0",
+  "description": "Plataforma web para que los estudiantes de Incuyo soliciten canciones para las clases de programación con Franco Profe",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "incuyo",
+    "canciones",
+    "musica-programacion",
+    "estudiantes",
+    "franco-profe",
+    "nodejs",
+    "vercel"
+  ],
+  "author": "Incuyo Coding Community",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}

@@ -1,0 +1,52 @@
+[
+  {
+    "id": "user-profe",
+    "name": "Franco (Profe)",
+    "email": "franco@incuyo.edu.ar",
+    "password": "profe123",
+    "role": "teacher",
+    "course": "Docente Incuyo",
+    "avatar": "👨‍🏫",
+    "createdAt": "2026-10-03T20:16:52.302Z"
+  },
+  {
+    "id": "user-matias",
+    "name": "Matías Rodríguez",
+    "email": "matias@estudiante.incuyo.edu.ar",
+    "password": "123",
+    "role": "student",
+    "course": "Desarrollo Web Full Stack",
+    "avatar": "💻",
+    "createdAt": "2026-10-05T20:16:52.303Z"
+  },
+  {
+    "id": "user-sofia",
+    "name": "Sofía Álvarez",
+    "email": "sofia@estudiante.incuyo.edu.ar",
+    "password": "123",
+    "role": "student",
+    "course": "Programación Backend Node.js",
+    "avatar": "🚀",
+    "createdAt": "2026-10-06T20:16:52.303Z"
+  },
+  {
+    "id": "user-lucas",
+    "name": "Lucas Benítez",
+    "email": "lucas@estudiante.incuyo.edu.ar",
+    "password": "123",
+    "role": "student",
+    "course": "Desarrollo Web Full Stack",
+    "avatar": "🎧",
+    "createdAt": "2026-10-07T20:16:52.303Z"
+  },
+  {
+    "id": "user-1791490620494-q4b1j",
+    "name": "Camila Gomez",
+    "email": "camila@estudiante.incuyo.edu.ar",
+    "password": "123",
+    "role": "student",
+    "course": "Frontend con React",
+    "avatar": "🎧",
+    "createdAt": "2026-10-08T20:17:00.494Z"
+  }
+]
