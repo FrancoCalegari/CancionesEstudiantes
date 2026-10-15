@@ -73,10 +73,10 @@ Abrí tu navegador en: [http://localhost:3005](http://localhost:3005)
 Si tenés una computadora conectada por HDMI al televisor del aula, ejecutá el cliente de reproducción sincronizado en tiempo real con la web:
 
 ```bash
-# Conectar al despliegue de Vercel (Producción):
-python3 clientMusic.py --url https://tu-proyecto.vercel.app
+# Iniciar reproductor (conectado por defecto a Producción en Vercel):
+python3 clientMusic.py
 
-# O conectar al servidor local:
+# O conectar al servidor local si estás desarrollando:
 python3 clientMusic.py --url http://localhost:3005
 ```
 
