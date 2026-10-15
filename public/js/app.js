@@ -479,17 +479,28 @@ const App = (() => {
       return;
     }
 
-    // If title was left empty, extract something clean from link or text
-    if (!title) {
-      if (linkOrTitle.startsWith('http')) {
-        title = 'Canción compartida (' + (linkOrTitle.includes('spotify') ? 'Spotify' : 'YouTube') + ')';
-      } else {
-        title = linkOrTitle;
-      }
-    }
-
     try {
       submitBtn.disabled = true;
+      submitBtn.textContent = 'Identificando canción...';
+
+      // Si no hay título y es enlace de YouTube/YT Music, resolverlo antes de subir
+      if (!title && (linkOrTitle.includes('youtube.com') || linkOrTitle.includes('youtu.be') || linkOrTitle.includes('music.youtube.com'))) {
+        const meta = await fetchYouTubeMetadata(linkOrTitle);
+        if (meta && meta.title) {
+          title = meta.title;
+          if (!artist && meta.artist) artist = meta.artist;
+        }
+      }
+
+      // Si aún no hay título, fallback limpio
+      if (!title) {
+        if (linkOrTitle.startsWith('http')) {
+          title = 'Canción compartida (' + (linkOrTitle.includes('spotify') ? 'Spotify' : 'YouTube') + ')';
+        } else {
+          title = linkOrTitle;
+        }
+      }
+
       submitBtn.textContent = 'Enviando...';
 
       const res = await fetch('/api/songs', {
@@ -667,8 +678,34 @@ const App = (() => {
 
   // ==================== MEDIA EMBEDS & HELPERS ====================
 
+  let resolveTitleTimeout = null;
+
+  async function fetchYouTubeMetadata(url) {
+    if (!url || typeof url !== 'string') return null;
+    const isYt = url.includes('youtube.com') || url.includes('youtu.be') || url.includes('music.youtube.com');
+    if (!isYt) return null;
+
+    try {
+      const cleanUrl = url.trim().replace('music.youtube.com', 'www.youtube.com');
+      const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json`;
+      const res = await fetch(oembedUrl);
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          title: data.title || '',
+          artist: data.author_name || ''
+        };
+      }
+    } catch (e) {
+      console.warn('No se pudo resolver metadatos de YouTube en cliente:', e);
+    }
+    return null;
+  }
+
   function handleLinkInputDetection(value) {
     const badge = $('#link-preview-badge');
+    const titleInput = $('#song-input-title');
+    const artistInput = $('#song-input-artist');
     if (!badge) return;
 
     if (!value || value.trim() === '') {
@@ -676,11 +713,32 @@ const App = (() => {
       return;
     }
 
+    if (resolveTitleTimeout) clearTimeout(resolveTitleTimeout);
+
     const val = value.toLowerCase();
-    if (val.includes('youtube.com') || val.includes('youtu.be')) {
+    const isYt = val.includes('youtube.com') || val.includes('youtu.be') || val.includes('music.youtube.com');
+
+    if (isYt) {
       badge.style.display = 'inline-flex';
       badge.className = 'platform-detect-pill platform-youtube';
-      badge.innerHTML = '🔴 Enlace de YouTube Detectado';
+      badge.innerHTML = '🔴 YouTube Detectado • ⏳ Buscando título...';
+
+      // Resolver en segundo plano con debounce de 350ms
+      resolveTitleTimeout = setTimeout(async () => {
+        const meta = await fetchYouTubeMetadata(value);
+        if (meta && meta.title) {
+          badge.innerHTML = `✨ <strong>${escapeHtml(meta.title.substring(0, 42))}${meta.title.length > 42 ? '...' : ''}</strong>`;
+          if (titleInput && (!titleInput.value || titleInput.value.startsWith('http') || titleInput.value.startsWith('Canción'))) {
+            titleInput.value = meta.title;
+          }
+          if (artistInput && !artistInput.value && meta.artist) {
+            artistInput.value = meta.artist;
+          }
+        } else {
+          badge.innerHTML = '🔴 Enlace de YouTube / YouTube Music';
+        }
+      }, 350);
+
     } else if (val.includes('spotify.com')) {
       badge.style.display = 'inline-flex';
       badge.className = 'platform-detect-pill platform-spotify';

@@ -73,12 +73,25 @@ Abrí tu navegador en: [http://localhost:3005](http://localhost:3005)
 Si tenés una computadora conectada por HDMI al televisor del aula, ejecutá el cliente de reproducción sincronizado en tiempo real con la web:
 
 ```bash
+# Instalar dependencias de Python (yt-dlp):
+pip install -r requirements.txt
+
 # Iniciar reproductor (conectado por defecto a Producción en Vercel):
 python3 clientMusic.py
 
 # O conectar al servidor local si estás desarrollando:
 python3 clientMusic.py --url http://localhost:3005
+
+# Opciones útiles:
+python3 clientMusic.py --player vlc --debug   # Modo depuración con VLC
+python3 clientMusic.py --player vlc --test "https://www.youtube.com/watch?v=..."  # Prueba inmediata
 ```
+
+### Requisitos del Sistema para HDMI:
+- **Python 3.10+**
+- **VLC** (`sudo apt install vlc`)
+- **Node.js** (`sudo apt install nodejs`) – Necesario para resolver firmas JavaScript de YouTube en streams HLS
+- **yt-dlp** (`pip install -r requirements.txt` o `sudo apt install yt-dlp`)
 
 ### Características del Cliente HDMI:
 - **Pantalla Completa Automática:** Inicia el video de YouTube a pantalla completa en el televisor usando `mpv` (o VLC/Navegador).

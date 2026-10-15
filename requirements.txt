@@ -1,0 +1,5 @@
+# Dependencias de Python para el cliente HDMI (clientMusic.py)
+# ============================================================
+# Permite mantener actualizado el extractor de streams para YouTube y YouTube Music
+
+yt-dlp>=2024.08.0

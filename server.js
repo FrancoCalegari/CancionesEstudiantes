@@ -131,11 +131,33 @@ app.get('/api/songs', async (req, res) => {
   }
 });
 
+async function resolveYouTubeMetadata(url) {
+  if (!url || typeof url !== 'string') return null;
+  const isYt = url.includes('youtube.com') || url.includes('youtu.be') || url.includes('music.youtube.com');
+  if (!isYt) return null;
+
+  try {
+    const cleanUrl = url.trim().replace('music.youtube.com', 'www.youtube.com');
+    const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json`;
+    const res = await fetch(oembedUrl);
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        title: data.title || '',
+        artist: data.author_name || ''
+      };
+    }
+  } catch (err) {
+    console.warn('[oEmbed Backend] Error al resolver metadatos de YouTube:', err.message);
+  }
+  return null;
+}
+
 app.post('/api/songs', async (req, res) => {
   try {
     const user = await getUserFromAuth(req);
     if (!user) {
-      return res.status(401).json({ error: 'Debes iniciar sesión para solicitar una canción.' });
+      return res.status(401).json({ error: 'Debes iniciar sesión para pedir canciones.' });
     }
 
     const config = await Store.getConfig();
@@ -143,17 +165,33 @@ app.post('/api/songs', async (req, res) => {
       return res.status(403).json({ error: 'Los pedidos de canciones están pausados temporalmente por el Profe Franco.' });
     }
 
-    const { title, artist, link, note } = req.body;
+    let { title, artist, link, note } = req.body;
 
     if (!title && !link) {
       return res.status(400).json({ error: 'Debes ingresar el nombre de la canción o un link de YouTube/Spotify.' });
     }
 
+    // Resolver automáticamente el título y artista con la URL de YouTube si no fue provisto o es genérico
+    const isGenericTitle = !title || title.startsWith('http') || title.startsWith('Canción compartida');
+    if (isGenericTitle && link) {
+      const ytMeta = await resolveYouTubeMetadata(link);
+      if (ytMeta && ytMeta.title) {
+        title = ytMeta.title;
+        if (!artist && ytMeta.artist) {
+          artist = ytMeta.artist;
+        }
+      }
+    }
+
+    if (!title) {
+      title = link ? (link.includes('spotify') ? 'Canción de Spotify' : 'Canción de YouTube') : 'Canción solicitada';
+    }
+
     const newSong = await Store.addSong({
       title,
-      artist,
-      link,
-      note,
+      artist: artist || '',
+      link: link || '',
+      note: note || '',
       requestedBy: user
     });
 

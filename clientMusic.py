@@ -120,10 +120,12 @@ class CancionesAPI:
 # ==================== CONTROLADOR DE REPRODUCCIÓN ====================
 
 class MediaEngine:
-    def __init__(self, player: str = 'mpv', fullscreen: bool = True, audio_only: bool = False):
+    def __init__(self, player: str = 'mpv', fullscreen: bool = True, audio_only: bool = False, debug: bool = False, volume: int = 50):
         self.player_type = player.lower()
         self.fullscreen = fullscreen
         self.audio_only = audio_only
+        self.debug = debug
+        self.volume = max(0, min(100, volume))
         self.current_process: Optional[subprocess.Popen] = None
         self.current_song: Optional[Dict[str, Any]] = None
         self._validate_player()
@@ -141,14 +143,76 @@ class MediaEngine:
         elif self.player_type == 'vlc' and not shutil.which('vlc'):
             self.player_type = 'browser'
 
+    @staticmethod
+    def is_youtube_link(link: str) -> bool:
+        """Devuelve True si el link es de YouTube o YouTube Music."""
+        return any(d in link for d in ('youtube.com', 'youtu.be', 'music.youtube.com'))
+
+    @staticmethod
+    def extract_stream_url(target: str, audio_only: bool = False, debug: bool = False) -> Optional[str]:
+        """Usa yt-dlp como intermediario para extraer la URL directa de streaming (HLS o CDN de YouTube).
+        Utiliza el solver JS remoto para evadir el error HTTP 403 Forbidden en VLC.
+        """
+        if not shutil.which('yt-dlp'):
+            if debug:
+                print(f"{Colors.YELLOW}[DEBUG] yt-dlp no encontrado en el sistema.{Colors.RESET}")
+            return None
+
+        # Detectar runtime JS disponible para yt-dlp
+        node_bin = shutil.which('node') or shutil.which('nodejs')
+        deno_bin = shutil.which('deno')
+
+        # Forzar selección de stream HLS m3u8 para evitar el error 403 Forbidden que YouTube impone a peticiones externas
+        fmt = 'best[protocol*=m3u8]/best[ext=mp4]/best'
+        cmd = [
+            'yt-dlp',
+            '--no-warnings',
+            '--no-playlist',
+            '--no-update',
+            '--remote-components', 'ejs:github',
+            '-f', fmt,
+            '-g', target
+        ]
+
+        if node_bin:
+            cmd.extend(['--js-runtimes', f'node:{node_bin}'])
+        elif deno_bin:
+            cmd.extend(['--js-runtimes', f'deno:{deno_bin}'])
+
+        if debug:
+            print(f"{Colors.CYAN}[DEBUG] Ejecutando extractor yt-dlp:{Colors.RESET} {' '.join(cmd)}")
+
+        try:
+            res = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE if not debug else None,
+                text=True,
+                timeout=20
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                urls = [u.strip() for u in res.stdout.strip().splitlines() if u.strip().startswith('http')]
+                if urls:
+                    if debug:
+                        print(f"{Colors.GREEN}[DEBUG] Stream resuelto con éxito:{Colors.RESET} {urls[0][:100]}...")
+                    return urls[0]
+            elif debug and res.stderr:
+                print(f"{Colors.RED}[DEBUG] yt-dlp stderr:{Colors.RESET} {res.stderr}")
+        except Exception as e:
+            if debug:
+                print(f"{Colors.RED}[DEBUG] Excepción en yt-dlp: {e}{Colors.RESET}")
+            else:
+                print(f"{Colors.YELLOW}⚠️ yt-dlp no pudo extraer el stream directo: {e}{Colors.RESET}")
+        return None
+
     def resolve_target(self, song: Dict[str, Any]) -> str:
         """Determina la URL o término de búsqueda óptimo para reproducir la canción."""
         link = song.get('link', '').strip()
         title = song.get('title', '').strip()
         artist = song.get('artist', '').strip()
 
-        # Si es enlace directo de YouTube
-        if 'youtube.com' in link or 'youtu.be' in link:
+        # Si es enlace directo de YouTube / YouTube Music
+        if self.is_youtube_link(link):
             return link
 
         # Si es enlace de Spotify o búsqueda sin link directo
@@ -156,10 +220,28 @@ class MediaEngine:
         if not query:
             query = link if link else "Lofi Hip Hop Beats"
 
-        # Formato de búsqueda integrado para mpv / yt-dlp
+        return f"ytsearch1:{query}"
+
+    def _effective_player(self, song: Dict[str, Any]) -> str:
+        """Determina el reproductor efectivo a usar.
+        Prioriza mpv (el más ligero, estable y con OSD nativo para HDMI TV).
+        Si mpv no está instalado, utiliza VLC como alternativa.
+        """
         if self.player_type == 'mpv':
-            return f"ytdl://ytsearch1:{query}"
-        return f"https://www.youtube.com/results?search_query={urllib.parse.quote(query)}"
+            if shutil.which('mpv'):
+                return 'mpv'
+            elif shutil.which('vlc'):
+                return 'vlc'
+            return 'browser'
+
+        if self.player_type == 'vlc':
+            if shutil.which('vlc'):
+                return 'vlc'
+            elif shutil.which('mpv'):
+                return 'mpv'
+            return 'browser'
+
+        return self.player_type
 
     def play(self, song: Dict[str, Any]):
         """Detiene cualquier reproducción anterior y lanza el nuevo tema."""
@@ -172,9 +254,17 @@ class MediaEngine:
         requester = song.get('requestedBy', {}).get('name', 'Estudiante')
         osd_text = f"🎵 {title} - {artist} | Pedido por: {requester}"
 
+        effective = self._effective_player(song)
+        if self.debug:
+            print(f"{Colors.CYAN}[DEBUG] Reproductor efectivo seleccionado: {effective}{Colors.RESET}")
+
         cmd = []
-        if self.player_type == 'mpv':
-            cmd = ['mpv']
+        if effective == 'mpv':
+            print(f"{Colors.DIM}⏳ Resolviendo stream HLS mediante yt-dlp...{Colors.RESET}")
+            stream_url = self.extract_stream_url(target, audio_only=self.audio_only, debug=self.debug)
+            mpv_target = stream_url if stream_url else target
+
+            cmd = ['mpv', f'--volume={self.volume}']
             if self.fullscreen:
                 cmd.append('--fs')
             if self.audio_only:
@@ -183,35 +273,56 @@ class MediaEngine:
                 '--no-terminal',
                 f'--title={title} - Incuyo Música',
                 f'--osd-msg1={osd_text}',
-                '--ytdl-format=bestvideo[height<=?1080]+bestaudio/best',
-                target
+                '--hr-seek=yes',
+                mpv_target
             ])
 
-        elif self.player_type == 'vlc':
-            cmd = ['vlc']
+        elif effective == 'vlc':
+            print(f"{Colors.DIM}⏳ Resolviendo stream directo mediante yt-dlp...{Colors.RESET}")
+            stream_url = self.extract_stream_url(target, audio_only=self.audio_only, debug=self.debug)
+            vlc_target = stream_url if stream_url else target
+
+            cmd = [
+                'vlc',
+                '--play-and-exit',
+                '--network-caching=1500',
+                f'--gain={round(self.volume / 100.0, 2)}'
+            ]
             if self.fullscreen:
                 cmd.append('--fullscreen')
             if self.audio_only:
-                cmd.append('--dummy-quiet')
-            cmd.append(target)
+                cmd.extend(['--no-video', '--intf', 'dummy'])
+            cmd.extend([
+                '--meta-title', f'{title} - Incuyo Música',
+                vlc_target
+            ])
 
-        elif self.player_type == 'browser':
-            # Intentar abrir en Chrome en modo kiosko o navegador por defecto
+        else:  # browser
+            browser_target = target
+            if target.startswith('ytsearch1:'):
+                query = target.replace('ytsearch1:', '', 1)
+                browser_target = f"https://www.youtube.com/results?search_query={urllib.parse.quote(query)}"
+
             chrome_bin = shutil.which('google-chrome') or shutil.which('chromium') or shutil.which('firefox')
             if chrome_bin:
                 cmd = [chrome_bin]
                 if self.fullscreen:
                     cmd.append('--kiosk')
-                cmd.append(target)
+                cmd.append(browser_target)
             else:
-                cmd = ['xdg-open', target]
+                cmd = ['xdg-open', browser_target]
+
+        if self.debug:
+            print(f"{Colors.CYAN}[DEBUG] Lanzando reproductor ({effective}):{Colors.RESET} {' '.join(cmd[:4])} ...")
 
         try:
             self.current_process = subprocess.Popen(
                 cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                stdout=subprocess.DEVNULL if not self.debug else None,
+                stderr=subprocess.DEVNULL if not self.debug else None
             )
+            if self.debug:
+                print(f"{Colors.GREEN}[DEBUG] Proceso iniciado con PID: {self.current_process.pid}{Colors.RESET}")
         except Exception as e:
             print(f"{Colors.RED}❌ Error al iniciar reproductor: {e}{Colors.RESET}")
 
@@ -237,13 +348,14 @@ class MediaEngine:
 
 # ==================== BUCLE PRINCIPAL Y GESTOR DE EVENTOS ====================
 
-def print_banner(server_url: str, player: str, fullscreen: bool, auto_next: bool):
+def print_banner(server_url: str, player: str, fullscreen: bool, auto_next: bool, volume: int = 50):
     os.system('clear' if os.name == 'posix' else 'cls')
     print(f"{Colors.CYAN}{Colors.BOLD}╔═══════════════════════════════════════════════════════════════════╗{Colors.RESET}")
     print(f"{Colors.CYAN}{Colors.BOLD}║      🎵 CancionesEstudiantes - Cliente TV HDMI (Incuyo)          ║{Colors.RESET}")
     print(f"{Colors.CYAN}{Colors.BOLD}╚═══════════════════════════════════════════════════════════════════╝{Colors.RESET}")
     print(f" 🌐 Servidor Conectado:  {Colors.GREEN}{server_url}{Colors.RESET}")
     print(f" 📺 Salida HDMI:         {Colors.MAGENTA}{player.upper()}{Colors.RESET} (Pantalla Completa: {'Sí' if fullscreen else 'No'})")
+    print(f" 🔊 Volumen Inicial:     {Colors.GREEN}{volume}%{Colors.RESET}")
     print(f" ⚡ Auto-Play Cola:      {Colors.YELLOW}{'Activado (Avanza automáticamente)' if auto_next else 'Desactivado (Control manual del Profe)'}{Colors.RESET}")
     print(f" 🛑 Presiona {Colors.BOLD}Ctrl + C{Colors.RESET} en esta terminal para detener el reproductor.")
     print(f"{Colors.DIM}─────────────────────────────────────────────────────────────────────{Colors.RESET}\n")
@@ -283,14 +395,47 @@ def display_status(song: Optional[Dict], pending_songs: list, config: Dict):
             print(f"   {i}. {s_title} ({s_votes} votos) - {Colors.DIM}{s_user}{Colors.RESET}")
     print(f"{Colors.DIM}─────────────────────────────────────────────────────────────────────{Colors.RESET}")
 
+def check_system_dependencies(selected_player: str = 'mpv') -> bool:
+    """Verifica si las herramientas esenciales están instaladas en Linux Mint / Ubuntu.
+    Si falta alguna, muestra un mensaje con el comando exacto para instalarla.
+    """
+    missing_apt = []
+
+    # 1. Reproductor (Recomendado: mpv para HDMI TV)
+    if selected_player == 'mpv' and not shutil.which('mpv'):
+        missing_apt.append('mpv')
+    elif selected_player == 'vlc' and not shutil.which('vlc'):
+        missing_apt.append('vlc')
+
+    # 2. Extractor de streams
+    if not shutil.which('yt-dlp'):
+        missing_apt.append('yt-dlp')
+
+    # 3. Runtime JS necesario para descifrar retos de firma de YouTube
+    if not shutil.which('node') and not shutil.which('nodejs') and not shutil.which('deno'):
+        missing_apt.append('nodejs')
+
+    if missing_apt:
+        print(f"\n{Colors.RED}{Colors.BOLD}╔═══════════════════════════════════════════════════════════════════╗{Colors.RESET}")
+        print(f"{Colors.RED}{Colors.BOLD}║   ⚠️  FALTAN DEPENDENCIAS DEL SISTEMA PARA REPRODUCCIÓN HDMI      ║{Colors.RESET}")
+        print(f"{Colors.RED}{Colors.BOLD}╚═══════════════════════════════════════════════════════════════════╝{Colors.RESET}")
+        print(f"Para reproducir música en Linux Mint sin errores se necesitan: {Colors.YELLOW}{', '.join(missing_apt)}{Colors.RESET}\n")
+        print(f"👉 {Colors.BOLD}Instalación rápida en Linux Mint (copiá y pegá en la terminal):{Colors.RESET}\n")
+        print(f"   {Colors.GREEN}{Colors.BOLD}sudo apt update && sudo apt install -y {' '.join(missing_apt)}{Colors.RESET}\n")
+        print(f"{Colors.DIM}💡 Tip: También podés instalar o actualizar el extractor con: pip install -r requirements.txt{Colors.RESET}")
+        print(f"{Colors.DIM}─────────────────────────────────────────────────────────────────────{Colors.RESET}\n")
+        time.sleep(2)
+        return False
+    return True
+
 def main():
     load_dotenv()
 
     parser = argparse.ArgumentParser(description="Cliente reproductor HDMI para CancionesEstudiantes.")
     parser.add_argument('--url', default=os.getenv('SERVER_URL', 'https://canciones-estudiantes.vercel.app/'),
                         help="URL base del servidor (default: https://canciones-estudiantes.vercel.app/)")
-    parser.add_argument('--player', default=os.getenv('PLAYER', 'browser'), choices=['mpv', 'vlc', 'browser'],
-                        help="Motor de reproducción a usar (default: browser)")
+    parser.add_argument('--player', default=os.getenv('PLAYER', 'mpv'), choices=['mpv', 'vlc', 'browser'],
+                        help="Motor de reproducción a usar (default: mpv)")
     parser.add_argument('--fullscreen', action='store_true', default=True,
                         help="Abrir en pantalla completa (Recomendado para HDMI TV)")
     parser.add_argument('--no-fullscreen', dest='fullscreen', action='store_false',
@@ -305,11 +450,26 @@ def main():
                         help="Correo de Franco Profe para actualizar estados automáticamente")
     parser.add_argument('--teacher-pass', default=os.getenv('TEACHER_PASSWORD', 'profe123'),
                         help="Contraseña de Franco Profe")
+    parser.add_argument('--debug', action='store_true', default=os.getenv('DEBUG', 'false').lower() == 'true',
+                        help="Activar modo depuración con información detallada de comandos y streams")
+    parser.add_argument('--volume', type=int, default=int(os.getenv('VOLUME', '50')),
+                        help="Volumen inicial de reproducción del 0 al 100 (default: 50)")
+    parser.add_argument('--test', type=str, default=None,
+                        help="Probar inmediatamente la reproducción de una URL o canción y salir")
 
     args = parser.parse_args()
 
+    # Comprobación de requerimientos para Linux Mint / Ubuntu
+    check_system_dependencies(selected_player=args.player)
+
     api = CancionesAPI(args.url, args.teacher_email, args.teacher_pass)
-    media = MediaEngine(player=args.player, fullscreen=args.fullscreen, audio_only=args.audio_only)
+    media = MediaEngine(
+        player=args.player,
+        fullscreen=args.fullscreen,
+        audio_only=args.audio_only,
+        debug=args.debug,
+        volume=args.volume
+    )
 
     def handle_exit(sig, frame):
         print(f"\n\n{Colors.YELLOW}Cerrando reproductor HDMI limpiamente...{Colors.RESET}")
@@ -319,7 +479,24 @@ def main():
     signal.signal(signal.SIGINT, handle_exit)
     signal.signal(signal.SIGTERM, handle_exit)
 
-    print_banner(args.url, media.player_type, args.fullscreen, args.auto_next)
+    # Si se pasó el parámetro --test, ejecutamos la prueba directamente y esperamos
+    if args.test:
+        print(f"\n{Colors.BOLD}{Colors.CYAN}🧪 MODO DE PRUEBA ACTIVO:{Colors.RESET} {args.test}")
+        test_song = {
+            'id': 'test-song',
+            'title': 'Prueba de Reproducción',
+            'artist': 'VLC & yt-dlp',
+            'link': args.test,
+            'requestedBy': {'name': 'Test Mode', 'avatar': '🧪', 'course': 'Debug'}
+        }
+        media.play(test_song)
+        print(f"{Colors.GREEN}▶️ Reproduciendo tema de prueba. Presiona Ctrl + C para terminar.{Colors.RESET}")
+        while media.is_playing():
+            time.sleep(1)
+        print(f"\n{Colors.GREEN}✅ Prueba finalizada exitosamente.{Colors.RESET}")
+        sys.exit(0)
+
+    print_banner(args.url, media.player_type, args.fullscreen, args.auto_next, media.volume)
 
     # Intentar login del docente para modo auto-next
     if args.auto_next:
@@ -342,14 +519,18 @@ def main():
             server_playing = stats.get('playing')
             config = state.get('config', {})
             all_songs = state.get('songs', [])
-            pending_songs = [s for s in all_songs if s.get('status') == 'pending']
+            pending_songs = sorted(
+                [s for s in all_songs if s.get('status') == 'pending'],
+                key=lambda s: s.get('votes', 0),
+                reverse=True
+            )
 
             # CASO 1: El servidor tiene una canción en estado 'playing'
             if server_playing:
                 new_id = server_playing.get('id')
                 if new_id != current_playing_id:
                     current_playing_id = new_id
-                    print_banner(args.url, media.player_type, args.fullscreen, args.auto_next)
+                    print_banner(args.url, media.player_type, args.fullscreen, args.auto_next, media.volume)
                     display_status(server_playing, pending_songs, config)
                     media.play(server_playing)
 
@@ -370,14 +551,14 @@ def main():
                     api.set_song_status(next_song['id'], 'playing')
                     current_playing_id = next_song['id']
                     media.play(next_song)
-                    print_banner(args.url, media.player_type, args.fullscreen, args.auto_next)
+                    print_banner(args.url, media.player_type, args.fullscreen, args.auto_next, media.volume)
                     display_status(next_song, pending_songs[1:], config)
 
             # Actualizar interfaz de terminal periódicamente si cambia el estado
             now = time.time()
             if now - last_ui_update > 15:
                 last_ui_update = now
-                print_banner(args.url, media.player_type, args.fullscreen, args.auto_next)
+                print_banner(args.url, media.player_type, args.fullscreen, args.auto_next, media.volume)
                 display_status(server_playing, pending_songs, config)
 
         except Exception as e:
