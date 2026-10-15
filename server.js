@@ -276,6 +276,11 @@ app.post('/api/config', async (req, res) => {
 
 app.post('/api/reset', async (req, res) => {
   try {
+    const user = await getUserFromAuth(req);
+    if (!user || user.role !== 'teacher') {
+      return res.status(403).json({ error: 'Solo el Profe Franco puede restablecer los datos.' });
+    }
+
     await Store.resetData();
     return res.json({ message: 'Datos de prueba restablecidos con éxito.' });
   } catch(err) {

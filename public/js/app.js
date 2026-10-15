@@ -647,12 +647,21 @@ const App = (() => {
   async function handleResetData() {
     if (!confirm('¿Restablecer las canciones de demostración iniciales de Incuyo?')) return;
     try {
-      const res = await fetch('/api/reset', { method: 'POST' });
+      const token = getAuthToken();
+      const res = await fetch('/api/reset', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Error al resetear');
+      }
       showToast(data.message, 'success');
       fetchData();
     } catch (e) {
-      showToast('Error al resetear', 'error');
+      showToast(e.message || 'Error al resetear', 'error');
     }
   }
 
