@@ -64,7 +64,27 @@ npm start
 npm run dev
 ```
 
-Abrí tu navegador en: [http://localhost:3000](http://localhost:3000)
+Abrí tu navegador en: [http://localhost:3005](http://localhost:3005)
+
+---
+
+## 📺 Reproductor HDMI para el Televisor de la Clase (`clientMusic.py`)
+
+Si tenés una computadora conectada por HDMI al televisor del aula, ejecutá el cliente de reproducción sincronizado en tiempo real con la web:
+
+```bash
+# Conectar al despliegue de Vercel (Producción):
+python3 clientMusic.py --url https://tu-proyecto.vercel.app
+
+# O conectar al servidor local:
+python3 clientMusic.py --url http://localhost:3005
+```
+
+### Características del Cliente HDMI:
+- **Pantalla Completa Automática:** Inicia el video de YouTube a pantalla completa en el televisor usando `mpv` (o VLC/Navegador).
+- **Cartel en Pantalla (OSD):** Muestra el título del tema, artista y el estudiante que lo solicitó.
+- **Modo DJ / Auto-Next:** Al terminar la canción, avanza automáticamente al siguiente tema más votado de la cola y actualiza el servidor.
+- **Control Remoto desde la Web:** Cada vez que el Profe Franco presiona *Reproducir ▶️* desde su celular o laptop, el televisor cambia de tema inmediatamente.
 
 ---
 
