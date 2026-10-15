@@ -287,10 +287,10 @@ def main():
     load_dotenv()
 
     parser = argparse.ArgumentParser(description="Cliente reproductor HDMI para CancionesEstudiantes.")
-    parser.add_argument('--url', default=os.getenv('SERVER_URL', 'https://canciones-estudiantes.vercel.app'),
-                        help="URL base del servidor (default: https://canciones-estudiantes.vercel.app)")
-    parser.add_argument('--player', default=os.getenv('PLAYER', 'mpv'), choices=['mpv', 'vlc', 'browser'],
-                        help="Motor de reproducción a usar (default: mpv)")
+    parser.add_argument('--url', default=os.getenv('SERVER_URL', 'https://canciones-estudiantes.vercel.app/'),
+                        help="URL base del servidor (default: https://canciones-estudiantes.vercel.app/)")
+    parser.add_argument('--player', default=os.getenv('PLAYER', 'browser'), choices=['mpv', 'vlc', 'browser'],
+                        help="Motor de reproducción a usar (default: browser)")
     parser.add_argument('--fullscreen', action='store_true', default=True,
                         help="Abrir en pantalla completa (Recomendado para HDMI TV)")
     parser.add_argument('--no-fullscreen', dest='fullscreen', action='store_false',
